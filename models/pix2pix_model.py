@@ -71,7 +71,7 @@ class Pix2PixModel(BaseModel):
             # define loss functions
             self.criterionGAN = networks.GANLoss(opt.gan_mode).to(self.device)
             self.criterionL1 = torch.nn.L1Loss()
-            self.criterionFFL = FocalFrequencyLoss(loss_weight=0.0) # added, unused (for now)
+            self.criterionFFL = FocalFrequencyLoss(loss_weight=1.0) # added
             self.criterionWVL = WaveletLoss(level=1, w0=0.001, w1=0.03) # Add with dtd values 
             # initialize optimizers; schedulers will be automatically created by function <BaseModel.setup>.
             self.optimizer_G = torch.optim.Adam(self.netG.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
