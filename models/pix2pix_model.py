@@ -1,7 +1,9 @@
 from numpy import zeros
 import torch
+import torch.nn as nn
 from focal_frequency_loss import FocalFrequencyLoss
 from cnn_loss import CNNLoss
+from wavelet_loss import WaveletLoss
 from .base_model import BaseModel
 from . import networks
 
@@ -30,12 +32,16 @@ class Pix2PixModel(BaseModel):
         For pix2pix, we do not use image buffer
         The training objective is: GAN Loss + lambda_L1 * ||G(A)-B||_1
         By default, we use vanilla GAN loss, UNet with batchnorm, and aligned datasets.
+        Options provided to include FFL and Wavelet losses (nonzero weight params)
         """
         # changing the default values to match the pix2pix paper (https://phillipi.github.io/pix2pix/)
         parser.set_defaults(norm='batch', netG='unet_256', dataset_mode='aligned')
         if is_train:
             parser.set_defaults(pool_size=0, gan_mode='vanilla')
             parser.add_argument('--lambda_L1', type=float, default=100.0, help='weight for L1 loss')
+            parser.add_argument('--ffl_w', type=float, default=0.0, help='loss weight for focal frequency component')
+            parser.add_argument('--wavelet_w0',type=float,default=0.0, help='loss weight for low frequency wavelet component')
+            parser.add_argument('--wavelet_w1',type=float,default=0.0, help='loss weight for high frequency wavelet component')
             parser.add_argument('--ffl_w', type=float, default=0.0, help='weight for focal-frequency loss')
             parser.add_argument('--cnn_loss_w0', type=float, default=0.0, help='early-layer weight for CNN loss')
             parser.add_argument('--cnn_loss_w1', type=float, default=0.0, help='mid-layer weight for CNN loss')
@@ -51,7 +57,7 @@ class Pix2PixModel(BaseModel):
         """
         BaseModel.__init__(self, opt)
         # specify the training losses you want to print out. The training/test scripts will call <BaseModel.get_current_losses>
-        self.loss_names = ['G_GAN', 'G_L1', 'G_FFL', 'G_CNN', 'D_real', 'D_fake']
+        self.loss_names = ['G_GAN', 'G_L1','G_FFL', 'G_CNN','G_WVL', 'D_real', 'D_fake']
         # specify the images you want to save/display. The training/test scripts will call <BaseModel.get_current_visuals>
         self.visual_names = ['real_A', 'fake_B', 'real_B']
         # specify the models you want to save to the disk. The training/test scripts will call <BaseModel.save_networks> and <BaseModel.load_networks>
@@ -73,6 +79,7 @@ class Pix2PixModel(BaseModel):
             self.criterionL1 = torch.nn.L1Loss()
             self.criterionFFL = FocalFrequencyLoss(loss_weight=1.0).to(self.device)
             self.criterionCNN = CNNLoss(w0=opt.cnn_loss_w0, w1=opt.cnn_loss_w1, model=opt.cnn_loss_model).to(self.device)
+            self.criterionWVL = WaveletLoss(level=1, w0=opt.wavelet_w0, w1=opt.wavelet_w1).to(self.device)
             # initialize optimizers; schedulers will be automatically created by function <BaseModel.setup>.
             self.optimizer_G = torch.optim.Adam(self.netG.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
             self.optimizer_D = torch.optim.Adam(self.netD.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
@@ -120,8 +127,9 @@ class Pix2PixModel(BaseModel):
         self.loss_G_L1 = self.criterionL1(self.fake_B, self.real_B) * self.opt.lambda_L1
         self.loss_G_FFL = self.criterionFFL(self.fake_B, self.real_B) * self.opt.ffl_w
         self.loss_G_CNN = self.criterionCNN(self.fake_B, self.real_B)
+        self.loss_G_WVL = self.criterionWVL(self.fake_B, self.real_B)
         # combine loss and calculate gradients
-        self.loss_G = self.loss_G_GAN + self.loss_G_L1 + self.loss_G_FFL + self.loss_G_CNN
+        self.loss_G = self.loss_G_GAN + self.loss_G_L1 + self.loss_G_WVL + self.loss_G_FFL + self.loss_G_CNN
         self.loss_G.backward()
 
     def optimize_parameters(self):
