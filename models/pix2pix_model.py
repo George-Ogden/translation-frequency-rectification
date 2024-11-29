@@ -1,3 +1,4 @@
+from numpy import zeros
 import torch
 import torch.nn as nn
 from focal_frequency_loss import FocalFrequencyLoss
