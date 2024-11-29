@@ -71,8 +71,8 @@ class Pix2PixModel(BaseModel):
             # define loss functions
             self.criterionGAN = networks.GANLoss(opt.gan_mode).to(self.device)
             self.criterionL1 = torch.nn.L1Loss()
-            self.criterionFFL = FocalFrequencyLoss(loss_weight=1.0) # added
-            self.criterionWVL = WaveletLoss(level=1, w0=0.001, w1=0.03) # Add with dtd values 
+            self.criterionFFL = FocalFrequencyLoss(loss_weight=1.0)
+            self.criterionWVL = WaveletLoss(level=1, w0=0.001, w1=0.03).to(self.device)
             # initialize optimizers; schedulers will be automatically created by function <BaseModel.setup>.
             self.optimizer_G = torch.optim.Adam(self.netG.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
             self.optimizer_D = torch.optim.Adam(self.netD.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
@@ -119,7 +119,7 @@ class Pix2PixModel(BaseModel):
         # Second, G(A) = B
         self.loss_G_L1 = self.criterionL1(self.fake_B, self.real_B) * self.opt.lambda_L1
         self.loss_G_FFL = self.criterionFFL(self.fake_B, self.real_B) * self.opt.ffl_w
-        self.loss_G_WVL = self.criterionWVL(self.fake_B, self.real_B)* self.opt.wavelet_w
+        self.loss_G_WVL = self.criterionWVL(self.fake_B, self.real_B) * self.opt.wavelet_w
         # combine loss and calculate gradients
         self.loss_G = self.loss_G_GAN + self.loss_G_L1 + self.loss_G_WVL + self.loss_G_FFL
         self.loss_G.backward()
