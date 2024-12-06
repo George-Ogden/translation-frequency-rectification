@@ -42,7 +42,6 @@ class Pix2PixModel(BaseModel):
             parser.add_argument('--ffl_w', type=float, default=0.0, help='loss weight for focal frequency component')
             parser.add_argument('--wavelet_w0',type=float,default=0.0, help='loss weight for low frequency wavelet component')
             parser.add_argument('--wavelet_w1',type=float,default=0.0, help='loss weight for high frequency wavelet component')
-            parser.add_argument('--ffl_w', type=float, default=0.0, help='weight for focal-frequency loss')
             parser.add_argument('--cnn_loss_w0', type=float, default=0.0, help='early-layer weight for CNN loss')
             parser.add_argument('--cnn_loss_w1', type=float, default=0.0, help='mid-layer weight for CNN loss')
             parser.add_argument('--cnn_loss_model', type=str, default="resnet18", help='model to use for CNN loss')
